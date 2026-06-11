@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>EVA Studio — Sistema Integral de Evaluación Capilar</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F2EE;
+    --surface: #FAFAFA;
+    --border: #E0D6C6;
+    --text: #212121;
+    --text-secondary: #6B6560;
+    --accent: #C2185B;
+    --accent-light: #F9EBF1;
+    --accent-dark: #8D1342;
+    --warn: #8D6A2F;
+    --warn-light: #FDF5E8;
+    --lino: #E0D6C6;
+    --carbon: #212121;
+    --tag-a: #C2185B;
+    --tag-b: #5A3A2D;
+    --tag-c: #212121;
+    --radius: 8px;
+    --font-display: 'Lora', serif;
+    --font-body: 'Montserrat', system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.5;
+    min-height: 100vh;
+  }
+
+  header {
+    background: var(--accent);
+    color: white;
+    padding: 20px 24px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+  }
+
+  header h1 { font-family: var(--font-display); font-size: 22px; font-weight: normal; letter-spacing: 0.04em; }
+  header span { font-size: 12px; opacity: 0.7; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .progress-bar { height: 3px; background: rgba(255,255,255,0.2); }
+  .progress-fill { height: 100%; background: white; transition: width 0.4s ease; width: 0%; }
+
+  main { max-width: 720px; margin: 0 auto; padding: 24px 16px 100px; }
+
+  .section { display: none; animation: fadeIn 0.3s ease; }
+  .section.active { display: block; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section-header { margin-bottom: 24px; }
+  .section-label { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; }
+  .section-title { font-family: var(--font-display); font-size: 26px; font-weight: normal; color: var(--text); }
+  .section-desc { font-size: 14px; color: var(--text-secondary); margin-top: 6px; }
+
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 12px; }
+  .card-label { font-size: 15px; font-weight: 600; color: var(--text); margin-bottom: 12px; }
+
+  /* INTAKE */
+  .intake-field { margin-bottom: 20px; }
+  .intake-field label { display: block; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 8px; }
+  .intake-field input {
+    width: 100%; padding: 14px 16px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 18px; color: var(--text); background: var(--bg); outline: none;
+    font-family: var(--font-body); transition: border-color 0.15s;
+  }
+  .intake-field input:focus { border-color: var(--accent); }
+  .intake-date { font-size: 15px; color: var(--text-secondary); padding: 14px 16px; background: var(--bg); border: 1px solid var(--border); border-radius: 6px; }
+
+  /* RADIO */
+  .radio-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-option {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+    border: 1px solid var(--border); border-radius: 6px; cursor: pointer;
+    transition: all 0.15s; user-select: none;
+  }
+  .radio-option:hover { border-color: var(--accent); background: var(--accent-light); }
+  .radio-option.selected { border-color: var(--accent); background: var(--accent-light); }
+  .radio-option.selected .radio-dot { background: var(--accent); border-color: var(--accent); }
+  .radio-dot {
+    width: 16px; height: 16px; border-radius: 50%; border: 2px solid var(--border);
+    flex-shrink: 0; transition: all 0.15s; display: flex; align-items: center; justify-content: center;
+  }
+  .radio-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: white; opacity: 0; transition: opacity 0.15s; }
+  .radio-option.selected .radio-dot::after { opacity: 1; }
+  .radio-label { font-size: 14px; }
+
+  /* SCANNER */
+  .scanner-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .scanner-field label { display: block; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 6px; }
+  .scanner-field input {
+    width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 6px;
+    font-size: 20px; font-weight: 600; color: var(--text); background: var(--bg);
+    text-align: center; appearance: none; -webkit-appearance: none; outline: none; transition: border-color 0.15s;
+  }
+  .scanner-field input:focus { border-color: var(--accent); }
+  .scanner-field .ref { font-size: 11px; color: var(--text-secondary); text-align: center; margin-top: 4px; }
+  .value-indicator { height: 4px; background: var(--border); border-radius: 2px; margin-top: 6px; overflow: hidden; }
+  .value-fill { height: 100%; border-radius: 2px; transition: width 0.3s, background 0.3s; }
+
+  /* EVA */
+  .eva-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 10px; }
+  .eva-variable { font-size: 13px; color: var(--text-secondary); margin-bottom: 2px; }
+  .eva-criterion { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+  .toggle-group { display: flex; gap: 8px; }
+  .toggle-btn { flex: 1; padding: 10px; border: 1px solid var(--border); border-radius: 6px; background: transparent; font-size: 14px; cursor: pointer; transition: all 0.15s; font-family: var(--font-body); }
+  .toggle-btn:hover { border-color: var(--accent); }
+  .toggle-btn.active-yes { background: var(--warn); border-color: var(--warn); color: white; }
+  .toggle-btn.active-no { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* REPORT */
+  .report-block { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; margin-bottom: 16px; }
+  .report-block h3 { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border); }
+  .report-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--bg); font-size: 14px; }
+  .report-row:last-child { border-bottom: none; }
+  .report-row .var-name { color: var(--text-secondary); }
+  .badge { font-size: 12px; padding: 3px 10px; border-radius: 20px; font-weight: 600; }
+  .badge-alert { background: var(--warn-light); color: var(--warn); }
+  .badge-ok { background: var(--accent-light); color: var(--accent); }
+  .badge-confirmed { background: #FFF3E0; color: #E65100; }
+  .badge-not-confirmed { background: var(--accent-light); color: var(--accent); }
+  .convergence-item { padding: 10px 12px; background: var(--bg); border-radius: 6px; font-size: 14px; margin-bottom: 6px; border-left: 3px solid var(--accent); }
+  .domains-display { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 8px; }
+  .domain-tag { padding: 10px 20px; border-radius: 6px; font-size: 15px; font-weight: 700; letter-spacing: 0.06em; color: white; }
+  .domain-A { background: var(--tag-a); }
+  .domain-B { background: var(--tag-b); }
+  .domain-C { background: var(--tag-c); }
+  .domain-detail { font-size: 13px; color: var(--text-secondary); margin-top: 12px; line-height: 1.6; }
+
+  .report-meta { background: var(--accent-light); border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px 20px; margin-bottom: 16px; }
+  .report-meta .meta-row { display: flex; justify-content: space-between; font-size: 14px; padding: 4px 0; }
+  .report-meta .meta-label { color: var(--text-secondary); }
+  .report-meta .meta-value { font-weight: 600; }
+
+  /* NAV */
+  .nav-wrapper { position: fixed; bottom: 0; left: 0; right: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 12px 16px; z-index: 100; }
+  .nav-inner { max-width: 720px; margin: 0 auto; display: flex; gap: 10px; }
+  .btn { flex: 1; padding: 14px; border-radius: var(--radius); font-size: 15px; font-weight: 600; cursor: pointer; border: none; font-family: var(--font-body); transition: all 0.15s; }
+  .btn-primary { background: var(--accent); color: white; }
+  .btn-primary:hover { background: #234a40; }
+  .btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); }
+  .btn-reset { background: var(--warn-light); color: var(--warn); border: 1px solid var(--warn); }
+  .btn-pdf { background: #1a1a2e; color: white; }
+  .btn-pdf:hover { background: #2d2d4e; }
+
+  .no-activate { padding: 14px; background: var(--bg); border-radius: 6px; font-size: 14px; color: var(--text-secondary); text-align: center; }
+
+  .presc-category { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin: 14px 0 6px; padding-bottom: 4px; border-bottom: 1px solid var(--accent-light); }
+  .presc-item { padding: 8px 0; border-bottom: 1px solid var(--bg); }
+  .presc-item:last-child { border-bottom: none; }
+  .presc-product { font-size: 14px; font-weight: 600; color: var(--text); }
+  .presc-reason { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  .sebo-btn { flex: 1; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: transparent; font-size: 13px; font-weight: 600; cursor: pointer; font-family: var(--font-body); transition: all 0.15s; }
+  .sebo-btn:hover { border-color: var(--accent); }
+  .sebo-active-e { background: var(--accent); border-color: var(--accent); color: white; }
+  .sebo-active-r { background: var(--carbon); border-color: var(--carbon); color: white; }
+
+  .cabina-note { font-size: 12px; color: var(--text-secondary); font-style: italic; margin-bottom: 14px; padding: 10px 12px; background: var(--accent-light); border-radius: 6px; }
+  .cabina-step { display: flex; gap: 12px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--bg); }
+  .cabina-step:last-child { border-bottom: none; }
+  .cabina-step-num { width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: white; font-size: 12px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 2px; }
+  .cabina-step-label { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 3px; }
+  .cabina-product { font-size: 14px; font-weight: 600; color: var(--text); line-height: 1.4; }
+
+  .tr-item { padding: 12px 0; border-bottom: 1px solid var(--bg); }
+  .tr-item:last-of-type { border-bottom: none; }
+  .tr-header { margin-bottom: 8px; }
+  .tr-paso { font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 2px; }
+  .tr-producto-sugerido { font-size: 14px; font-weight: 600; color: var(--text); }
+  .tr-opciones { display: flex; gap: 6px; }
+  .tr-btn { flex: 1; padding: 8px 4px; border: 1px solid var(--border); border-radius: 6px; background: transparent; font-size: 12px; font-weight: 600; cursor: pointer; font-family: var(--font-body); transition: all 0.15s; }
+  .tr-active-ok { background: var(--accent); border-color: var(--accent); color: white; }
+  .tr-active-mod { background: #E09E3C; border-color: #E09E3C; color: white; }
+  .tr-active-no { background: var(--border); border-color: var(--border); color: var(--text-secondary); }
+  .tr-notas { margin-top: 16px; }
+  .tr-notas-label { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); margin-bottom: 4px; }
+
+  /* PDF STYLES */
+  @media print {
+    header, .progress-bar, .nav-wrapper, .btn, #btn-pdf-container { display: none !important; }
+    body { background: white; font-size: 12px; }
+    main { padding: 0; max-width: 100%; }
+    .section { display: none !important; }
+    #sec-reporte { display: block !important; }
+    .report-block { break-inside: avoid; border: 1px solid #ccc; }
+    .domain-tag { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  }
+
+  /* HOME */
+  .home-hero { text-align: center; padding: 56px 24px 40px; }
+  .home-leaf { font-size: 40px; margin-bottom: 12px; opacity: 0.7; }
+  .home-logo { font-family: 'Montserrat', sans-serif; font-size: 42px; font-weight: 700; letter-spacing: 0.12em; color: var(--accent); line-height: 1; }
+  .home-logo span { color: var(--carbon); font-weight: 400; }
+  .home-tagline { font-size: 11px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-secondary); margin-top: 6px; font-family: 'Montserrat', sans-serif; }
+  .home-divider { width: 40px; height: 1px; background: var(--accent); margin: 20px auto; }
+  .home-subtitle { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-secondary); }
+  .home-menu { display: flex; flex-direction: column; gap: 12px; padding: 0 0 24px; }
+  .home-btn { display: flex; align-items: center; gap: 16px; padding: 20px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); cursor: pointer; text-align: left; transition: all 0.15s; }
+  .home-btn:hover { border-color: var(--accent); }
+  .home-btn-icon { width: 44px; height: 44px; border-radius: 10px; background: var(--accent); color: white; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .home-btn-icon.secondary { background: var(--lino); border: 1px solid var(--border); color: var(--text-secondary); font-size: 16px; }
+  .home-btn-title { font-size: 15px; font-weight: 600; color: var(--text); font-family: 'Montserrat', sans-serif; }
+  .home-btn-desc { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
+
+  /* GLOSARIO */
+  .glosario-section { margin-bottom: 24px; }
+  .glosario-section-title { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); font-weight: 700; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 2px solid var(--accent-light); }
+  .glosario-item { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; margin-bottom: 8px; }
+  .glosario-term { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+  .glosario-def { font-size: 14px; color: var(--text-secondary); line-height: 1.6; }
+
+</style>
+</head>
+<body>
+
+<header>
+  <h1 onclick="goHome()" style="cursor:pointer; font-family:'Montserrat',sans-serif; font-weight:700; letter-spacing:0.1em;">EVA <span style="font-weight:400; opacity:0.8;">STUDIO</span></h1>
+  <span id="header-subtitle">Sistema Capilar</span>
+</header>
+<div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+
+<main>
+
+  <!-- INICIO -->
+  <div class="section active" id="sec-home">
+    <div class="home-hero">
+      <div class="home-leaf">🌿</div>
+      <div class="home-logo">EVA <span>STUDIO</span></div>
+      <div class="home-tagline">Boutique Capilar</div>
+      <div class="home-divider"></div>
+      <div class="home-subtitle">Sistema de Evaluación Capilar</div>
+    </div>
+    <div class="home-menu">
+      <div class="home-btn" onclick="startEvaluation()">
+        <div class="home-btn-icon">✦</div>
+        <div>
+          <div class="home-btn-title">Nueva evaluación</div>
+          <div class="home-btn-desc">Diagnóstico, prescripción y protocolo en cabina</div>
+        </div>
+      </div>
+      <div class="home-btn" onclick="showGlosario()">
+        <div class="home-btn-icon secondary">≡</div>
+        <div>
+          <div class="home-btn-title">Glosario</div>
+          <div class="home-btn-desc">Términos del sistema EVA</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- GLOSARIO -->
+  <div class="section" id="sec-glosario">
+    <div class="section-header">
+      <div class="section-label">Referencia</div>
+      <div class="section-title">Glosario</div>
+    </div>
+    <div id="glosario-content"></div>
+  </div>
+
+  <!-- SECCIÓN 0: INTAKE -->
+  <div class="section active" id="sec-intake">
+    <div class="section-header">
+      <div class="section-label">Inicio</div>
+      <div class="section-title">Datos de la sesión</div>
+    </div>
+    <div class="card">
+      <div class="intake-field">
+        <label>Fecha</label>
+        <div class="intake-date" id="intake-date"></div>
+      </div>
+      <div class="intake-field">
+        <label>Nombre de la huésped</label>
+        <input type="text" id="input-nombre" placeholder="Nombre completo" oninput="state.nombre = this.value">
+      </div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 1: CUESTIONARIO -->
+  <div class="section" id="sec-cuestionario">
+    <div class="section-header">
+      <div class="section-label">Sección 1 de 3</div>
+      <div class="section-title">Cuestionario de fibra</div>
+      <div class="section-desc">Observaciones reportadas por la huésped.</div>
+    </div>
+    <div id="cuestionario-cards"></div>
+  </div>
+
+  <!-- SECCIÓN 2: ESCÁNER -->
+  <div class="section" id="sec-scanner">
+    <div class="section-header">
+      <div class="section-label">Sección 2 de 3</div>
+      <div class="section-title">Escáner O'right</div>
+      <div class="section-desc">Introduce los valores del diagrama. Referente mínimo funcional: 75.</div>
+    </div>
+    <div class="card">
+      <div class="scanner-grid" id="scanner-grid"></div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN 3: VALIDACIÓN EVA -->
+  <div class="section" id="sec-eva">
+    <div class="section-header">
+      <div class="section-label">Sección 3 de 3</div>
+      <div class="section-title">Validación física EVA</div>
+      <div class="section-desc">Activa únicamente para variables con respuesta "Sí frecuente".</div>
+    </div>
+    <div id="eva-items"></div>
+  </div>
+
+  <!-- REPORTE -->
+  <div class="section" id="sec-reporte">
+    <div class="section-header">
+      <div class="section-label">Reporte</div>
+      <div class="section-title">Resultado de la evaluación</div>
+    </div>
+    <div id="reporte-content"></div>
+    <div id="btn-pdf-container" style="margin-top:8px;">
+      <button class="btn btn-pdf" style="width:100%;margin-bottom:8px;" onclick="generarPDF()">Generar reporte PDF</button>
+    </div>
+  </div>
+
+</main>
+
+<div class="nav-wrapper">
+  <div class="nav-inner">
+    <button class="btn btn-secondary" id="btn-home" onclick="goHome()" style="display:none">Inicio</button>
+    <button class="btn btn-secondary" id="btn-back" onclick="navigate(-1)" style="display:none">Atrás</button>
+    <button class="btn btn-primary" id="btn-next" onclick="navigate(1)" style="display:none">Continuar</button>
+    <button class="btn btn-reset" id="btn-reset" onclick="resetApp()" style="display:none">Nueva sesión</button>
+  </div>
+</div>
+
+<script>
+const CUESTIONARIO_VARS = [
+  { id: 'resequedad', label: 'Resequedad' },
+  { id: 'frizz', label: 'Frizz' },
+  { id: 'quiebre', label: 'Quiebre' },
+  { id: 'estabilidad', label: 'Pérdida de color, peinado o alisado' },
+  { id: 'pesadez', label: 'Sin movimiento natural' },
+];
+
+const SCANNER_VARS = [
+  { id: 'sebo', label: 'Sebo' },
+  { id: 'sensibilidad', label: 'Sensibilidad' },
+  { id: 'descamacion', label: 'Descamación' },
+  { id: 'poro', label: 'Poro' },
+  { id: 'diametro', label: 'Diámetro' },
+  { id: 'volumen', label: 'Volumen' },
+];
+
+const EVA_MAP = {
+  resequedad: { criterion: 'Fricción elevada' },
+  frizz: { criterion: 'Cohesión reducida' },
+  quiebre: { criterion: 'Integridad visual alterada' },
+  estabilidad: { criterion: 'Respaldo en historia química y conversación técnica' },
+  pesadez: { criterion: 'Movilidad reducida' },
+};
+
+const CORRELATIONS = [
+  { vars: ['scanner_sebo', 'scanner_poro'], label: 'Sebo fuera de rango / Poro fuera de rango' },
+  { vars: ['scanner_sebo', 'pesadez'], label: 'Sebo fuera de rango / Falta de movilidad' },
+  { vars: ['scanner_sebo', 'resequedad'], label: 'Sebo fuera de rango / Resequedad' },
+  { vars: ['scanner_sebo', 'scanner_sensibilidad'], label: 'Sebo fuera de rango / Sensibilidad fuera de rango' },
+  { vars: ['resequedad', 'friccion'], label: 'Resequedad / Fricción elevada' },
+  { vars: ['scanner_descamacion', 'scanner_sensibilidad'], label: 'Descamación / Sensibilidad' },
+  { vars: ['frizz', 'cohesion'], label: 'Frizz / Cohesión reducida' },
+  { vars: ['quiebre', 'integridad'], label: 'Quiebre / Integridad visual alterada' },
+  { vars: ['pesadez', 'movilidad'], label: 'Falta de movilidad / Movilidad reducida' },
+];
+
+const DOMAIN_LABELS = { A: 'Regulación', B: 'Reestructuración', C: 'Reconstrucción' };
+
+let state = { nombre: '', fecha: '', seboTipo: null, diametroTipo: null, tratamiento: {}, cuestionario: {}, scanner: {}, eva: {}, currentSection: 0 };
+const sections = ['sec-home', 'sec-intake', 'sec-cuestionario', 'sec-scanner', 'sec-eva', 'sec-reporte'];
+const evalSections = ['sec-intake', 'sec-cuestionario', 'sec-scanner', 'sec-eva', 'sec-reporte'];
+
+function goHome() {
+  const allSections = ['sec-home', 'sec-glosario', 'sec-intake', 'sec-cuestionario', 'sec-scanner', 'sec-eva', 'sec-reporte'];
+  allSections.forEach(s => {
+    const el = document.getElementById(s);
+    if (el) el.classList.remove('active');
+  });
+  document.getElementById('sec-home').classList.add('active');
+  document.getElementById('header-subtitle').textContent = 'Sistema Capilar';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('btn-back').style.display = 'none';
+  document.getElementById('btn-next').style.display = 'none';
+  document.getElementById('btn-reset').style.display = 'none';
+  document.getElementById('btn-home').style.display = 'none';
+  window.scrollTo(0, 0);
+}
+
+const GLOSARIO = [
+  {
+    seccion: "Escáner O'right",
+    terminos: [
+      ['Sebo', 'Producción de grasa natural del cuero cabelludo. Un valor por debajo de 75 indica desequilibrio, que puede ser exceso o deficiencia — el operador determina cuál mediante observación directa. El exceso genera cabello graso y poro obstruido; la deficiencia genera cuero cabelludo seco y sensible.'],
+      ['Sensibilidad', 'Reactividad del cuero cabelludo ante estímulos externos. Un valor por debajo de 75 indica un cuero cabelludo que responde con irritación, enrojecimiento o incomodidad ante productos, temperatura o manipulación.'],
+      ['Descamación', 'Desprendimiento de células del cuero cabelludo. Un valor por debajo de 75 indica presencia visible de escamas, que puede acompañarse de picazón o irritación.'],
+      ['Poro', 'Estado del folículo piloso. Un valor por debajo de 75 indica obstrucción o desequilibrio en el poro, frecuentemente asociado a exceso de sebo.'],
+      ['Diámetro', 'Grosor de la fibra capilar. Un valor por debajo de 75 indica fibra delgada, que puede ser constitutiva (siempre ha sido así) o progresiva (se ha adelgazado con el tiempo).'],
+      ['Volumen', 'Densidad y cuerpo del cabello en conjunto. Un valor por debajo de 75 indica pérdida de volumen, frecuentemente asociada a adelgazamiento progresivo de la fibra o debilitamiento de la raíz.'],
+    ]
+  },
+  {
+    seccion: 'Cuestionario de fibra',
+    terminos: [
+      ['Resequedad', 'El cabello se percibe seco al tacto, sin humedad aparente. Puede presentarse con opacidad, aspereza o dificultad para peinarse.'],
+      ['Frizz', 'El cabello presenta pelos sueltos que se separan del resto, especialmente en condiciones de humedad. Indica pérdida de cohesión en la superficie de la fibra.'],
+      ['Quiebre', 'El tallo del cabello se parte antes de llegar a la punta. No confundir con caída: el quiebre ocurre en cualquier punto del largo, no en la raíz.'],
+      ['Pérdida de color, peinado o alisado', 'El resultado de un proceso químico no se mantiene en el tiempo esperado. El color se desvanece prematuramente, el liso cede antes de lo normal, o el rizo vuelve antes de lo previsto.'],
+      ['Sin movimiento natural', 'El cabello no fluye con el movimiento del cuerpo. Se percibe rígido, sin rebote y sin caída natural.'],
+    ]
+  },
+  {
+    seccion: 'Validación física EVA',
+    terminos: [
+      ['Fricción elevada', 'Al deslizar los dedos por el tallo del cabello de punta a raíz, se percibe resistencia o aspereza. Indica resequedad en la superficie de la fibra.'],
+      ['Cohesión reducida', 'El cabello no forma mechones, se separa con facilidad y no se agrupa de forma natural. Se observa visualmente y al tacto.'],
+      ['Integridad visual alterada', 'El cabello presenta aspecto dañado observable: opacidad, puntas abiertas, textura irregular o quiebre visible a lo largo del tallo.'],
+      ['Respaldo en historia química y conversación técnica', 'El operador confirma, a través de la conversación con la huésped, que existe historial de procesos químicos (tinte, decoloración, alisado, permanente) que explica la pérdida de resultado reportada.'],
+      ['Movilidad reducida', 'El cabello no fluye ni responde al movimiento. Se percibe pesado, sin rebote y sin caída natural al moverlo.'],
+    ]
+  }
+];
+
+function buildGlosario() {
+  const container = document.getElementById('glosario-content');
+  container.innerHTML = '';
+  GLOSARIO.forEach(sec => {
+    const div = document.createElement('div');
+    div.className = 'glosario-section';
+    div.innerHTML = `<div class="glosario-section-title">${sec.seccion}</div>` +
+      sec.terminos.map(([t, d]) => `
+        <div class="glosario-item">
+          <div class="glosario-term">${t}</div>
+          <div class="glosario-def">${d}</div>
+        </div>`).join('');
+    container.appendChild(div);
+  });
+}
+
+function showGlosario() {
+  sections.forEach(s => document.getElementById(s).classList.remove('active'));
+  document.getElementById('sec-glosario').classList.add('active');
+  document.getElementById('header-subtitle').textContent = 'Glosario';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('btn-back').style.display = 'none';
+  document.getElementById('btn-next').style.display = 'none';
+  document.getElementById('btn-reset').style.display = 'none';
+  document.getElementById('btn-home').style.display = 'block';
+  buildGlosario();
+  window.scrollTo(0, 0);
+}
+
+function startEvaluation() {
+  state = { nombre: '', fecha: state.fecha, seboTipo: null, diametroTipo: null, tratamiento: {}, cuestionario: {}, scanner: {}, eva: {}, currentSection: 0 };
+  sections.forEach(s => document.getElementById(s).classList.remove('active'));
+  document.getElementById('sec-intake').classList.add('active');
+  document.getElementById('input-nombre').value = '';
+  document.getElementById('header-subtitle').textContent = 'Evaluación Capilar';
+  state.evalStep = 0;
+  updateNavEval();
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+// Set date
+function formatDate(d) {
+  const days = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+  const months = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  return `${days[d.getDay()]}, ${d.getDate()} de ${months[d.getMonth()]} de ${d.getFullYear()}`;
+}
+const now = new Date();
+state.fecha = formatDate(now);
+document.getElementById('intake-date').textContent = state.fecha;
+
+function buildCuestionario() {
+  const container = document.getElementById('cuestionario-cards');
+  container.innerHTML = '';
+  CUESTIONARIO_VARS.forEach(v => {
+    const current = state.cuestionario[v.id] || null;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="card-label">${v.label}</div>
+      <div class="radio-group">
+        ${['no', 'ocasional', 'frecuente'].map(opt => `
+          <div class="radio-option ${current === opt ? 'selected' : ''}" onclick="selectCuestionario('${v.id}', '${opt}', this)">
+            <div class="radio-dot"></div>
+            <span class="radio-label">${opt === 'no' ? 'No' : opt === 'ocasional' ? 'Sí — Ocasional' : 'Sí — Frecuente'}</span>
+          </div>
+        `).join('')}
+      </div>`;
+    container.appendChild(card);
+  });
+}
+
+function selectCuestionario(varId, value, el) {
+  state.cuestionario[varId] = value;
+  el.closest('.radio-group').querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function buildScanner() {
+  const grid = document.getElementById('scanner-grid');
+  grid.innerHTML = '';
+  SCANNER_VARS.forEach(v => {
+    const val = state.scanner[v.id] || '';
+    const field = document.createElement('div');
+    field.className = 'scanner-field';
+    const num = parseInt(val);
+    const showSebo = v.id === 'sebo' && !isNaN(num) && num < 75;
+    const seboTipo = state.seboTipo || null;
+    field.innerHTML = `
+      <label>${v.label}</label>
+      <input type="number" min="0" max="100" placeholder="—" value="${val}"
+        oninput="updateScanner('${v.id}', this.value)" inputmode="numeric">
+      <div class="ref">ref. ≥ 75</div>
+      <div class="value-indicator"><div class="value-fill" id="fill-${v.id}" style="width:${val ? val : 0}%; background:${getColor(val)}"></div></div>
+      ${v.id === 'sebo' ? `<div id="sebo-toggle" style="display:${showSebo ? 'flex' : 'none'}; gap:6px; margin-top:8px;">
+        <button class="sebo-btn ${seboTipo === 'exceso' ? 'sebo-active-e' : ''}" onclick="setSeboTipo('exceso', this)">E — Exceso</button>
+        <button class="sebo-btn ${seboTipo === 'resequedad' ? 'sebo-active-r' : ''}" onclick="setSeboTipo('resequedad', this)">R — Resequedad</button>
+      </div>` : ''}`;
+    grid.appendChild(field);
+  });
+}
+
+function getColor(val) {
+  if (!val) return '#E2DED8';
+  val = parseInt(val);
+  if (val < 40) return '#C4622D';
+  if (val < 75) return '#E09E3C';
+  return '#2D5A4F';
+}
+
+function setSeboTipo(value, el) {
+  state.seboTipo = value;
+  const toggle = document.getElementById('sebo-toggle');
+  if (toggle) {
+    toggle.querySelectorAll('.sebo-btn').forEach(b => {
+      b.classList.remove('sebo-active-e', 'sebo-active-r');
+    });
+    el.classList.add(value === 'exceso' ? 'sebo-active-e' : 'sebo-active-r');
+  }
+}
+
+function selectDiametroTipo(value, el) {
+  state.diametroTipo = value;
+  el.closest('.radio-group').querySelectorAll('.radio-option').forEach(o => o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function updateScanner(varId, value) {
+  state.scanner[varId] = value;
+  const fill = document.getElementById('fill-' + varId);
+  if (fill) { fill.style.width = (value ? Math.min(value, 100) : 0) + '%'; fill.style.background = getColor(value); }
+  if (varId === 'sebo') {
+    const num = parseInt(value);
+    const toggle = document.getElementById('sebo-toggle');
+    if (toggle) {
+      toggle.style.display = (!isNaN(num) && num < 75) ? 'flex' : 'none';
+      if (isNaN(num) || num >= 75) { state.seboTipo = null; }
+    }
+  }
+}
+
+function buildEVA() {
+  const container = document.getElementById('eva-items');
+  container.innerHTML = '';
+  const frecuentes = CUESTIONARIO_VARS.filter(v => state.cuestionario[v.id] === 'frecuente');
+  if (frecuentes.length === 0) {
+    container.innerHTML = '<div class="no-activate">Ninguna variable presenta "Sí frecuente". La validación física no se activa en esta sesión.</div>';
+    return;
+  }
+  frecuentes.forEach(v => {
+    const eva = EVA_MAP[v.id];
+    const current = state.eva[v.id];
+    const item = document.createElement('div');
+    item.className = 'eva-item';
+    item.innerHTML = `
+      <div class="eva-variable">${v.label}</div>
+      <div class="eva-criterion">${eva.criterion}</div>
+      <div class="toggle-group">
+        <button class="toggle-btn ${current === true ? 'active-yes' : ''}" onclick="setEVA('${v.id}', true, this)">Sí</button>
+        <button class="toggle-btn ${current === false ? 'active-no' : ''}" onclick="setEVA('${v.id}', false, this)">No</button>
+      </div>`;
+    container.appendChild(item);
+  });
+}
+
+function setEVA(varId, value, el) {
+  state.eva[varId] = value;
+  el.closest('.toggle-group').querySelectorAll('.toggle-btn').forEach(b => b.classList.remove('active-yes', 'active-no'));
+  el.classList.add(value ? 'active-yes' : 'active-no');
+}
+
+function buildReporte() {
+  const content = document.getElementById('reporte-content');
+  content.innerHTML = '';
+
+  // Meta
+  const meta = document.createElement('div');
+  meta.className = 'report-meta';
+  meta.innerHTML = `
+    <div class="meta-row"><span class="meta-label">Huésped</span><span class="meta-value">${state.nombre || '—'}</span></div>
+    <div class="meta-row"><span class="meta-label">Fecha</span><span class="meta-value">${state.fecha}</span></div>`;
+  content.appendChild(meta);
+
+  // Cuestionario
+  const cb = document.createElement('div');
+  cb.className = 'report-block';
+  cb.innerHTML = '<h3>Cuestionario de fibra</h3>' +
+    CUESTIONARIO_VARS.map(v => {
+      const val = state.cuestionario[v.id];
+      const label = val === 'frecuente' ? 'Sí — Frecuente' : val === 'ocasional' ? 'Sí — Ocasional' : val === 'no' ? 'No' : '—';
+      const badge = val === 'frecuente' ? 'badge-alert' : 'badge-ok';
+      return `<div class="report-row"><span class="var-name">${v.label}</span><span class="badge ${badge}">${label}</span></div>`;
+    }).join('');
+  content.appendChild(cb);
+
+  // Escáner
+  const sb = document.createElement('div');
+  sb.className = 'report-block';
+  sb.innerHTML = "<h3>Escáner O'right</h3>" +
+    SCANNER_VARS.map(v => {
+      const val = state.scanner[v.id];
+      const num = parseInt(val);
+      const badge = (!val || isNaN(num)) ? '' : num < 75 ? 'badge-alert' : 'badge-ok';
+      const display = (!val || isNaN(num)) ? '—' : `${num}`;
+      return `<div class="report-row"><span class="var-name">${v.label}</span><span class="badge ${badge}">${display}</span></div>`;
+    }).join('');
+  content.appendChild(sb);
+
+  // EVA
+  const evaKeys = Object.keys(state.eva);
+  if (evaKeys.length > 0) {
+    const eb = document.createElement('div');
+    eb.className = 'report-block';
+    eb.innerHTML = '<h3>Validación física EVA</h3>' +
+      evaKeys.map(k => {
+        const criterion = EVA_MAP[k].criterion;
+        const val = state.eva[k];
+        return `<div class="report-row"><span class="var-name">${criterion}</span><span class="badge ${val ? 'badge-confirmed' : 'badge-not-confirmed'}">${val ? 'Confirmado' : 'No confirmado'}</span></div>`;
+      }).join('');
+    content.appendChild(eb);
+  }
+
+  // Convergencias
+  const activeSignals = getActiveSignals();
+  const convergencias = CORRELATIONS.filter(c => c.vars.every(v => activeSignals.includes(v)));
+  if (convergencias.length > 0) {
+    const convb = document.createElement('div');
+    convb.className = 'report-block';
+    convb.innerHTML = '<h3>Convergencias observadas</h3>' +
+      convergencias.map(c => `<div class="convergence-item">${c.label}</div>`).join('');
+    content.appendChild(convb);
+  }
+
+  // Dominios
+  const domains = getActiveDomains(activeSignals);
+  const db = document.createElement('div');
+  db.className = 'report-block';
+  db.innerHTML = `<h3>Orientación de intervención</h3>
+    <div class="domains-display">${domains.map(d => `<span class="domain-tag domain-${d}">${d} — ${DOMAIN_LABELS[d]}</span>`).join('')}</div>
+    <div class="domain-detail">${getDomainDetail(domains)}</div>`;
+  content.appendChild(db);
+
+  // Prescripción domiciliaria
+  let prescripciones = [];
+  try { prescripciones = getPrescripciones(activeSignals); } catch(e) { console.error('getPrescripciones error:', e); }
+
+  if (prescripciones.length > 0) {
+    const pb = document.createElement('div');
+    pb.className = 'report-block';
+    let html = '<h3>Prescripción domiciliaria</h3>';
+    const categorias = ['Shampoo', 'Scalp', 'Acondicionador', 'Mascarilla', 'Aceite'];
+    categorias.forEach(cat => {
+      const items = prescripciones.filter(p => p.categoria === cat);
+      if (items.length === 0) return;
+      html += `<div class="presc-category">${cat}</div>`;
+      items.forEach(p => {
+        html += `<div class="presc-item">
+          <div class="presc-product">${p.producto}</div>
+          <div class="presc-reason">${p.desequilibrio}</div>
+        </div>`;
+      });
+    });
+    pb.innerHTML = html;
+    content.appendChild(pb);
+  }
+
+  // Orientación de tratamiento en cabina
+  let cabina = [];
+  try { cabina = getCabinaProtocol(prescripciones); } catch(e) { console.error('getCabinaProtocol error:', e); }
+
+  if (cabina.length > 0) {
+    const cb2 = document.createElement('div');
+    cb2.className = 'report-block';
+    let html = '<h3>Orientación de tratamiento en cabina</h3>';
+    html += `<div class="cabina-note">Sugerencia derivada del diagnóstico. El especialista confirma, ajusta o sustituye antes de proceder.</div>`;
+    const pasos = ['Shampoo', 'Mascarilla', 'Acondicionador', 'Aceite', 'Cierre'];
+    pasos.forEach((paso, i) => {
+      const items = cabina.filter(p => p.paso === paso);
+      if (items.length === 0) return;
+      html += `<div class="cabina-step">
+        <div class="cabina-step-num">${i + 1}</div>
+        <div class="cabina-step-content">
+          <div class="cabina-step-label">${paso}</div>
+          ${items.map(p => `<div class="cabina-product">${p.producto}</div>`).join('')}
+        </div>
+      </div>`;
+    });
+    cb2.innerHTML = html;
+    content.appendChild(cb2);
+  }
+
+  // Tratamiento realizado
+  if (cabina.length > 0) {
+    const tr = document.createElement('div');
+    tr.className = 'report-block';
+    let html = '<h3>Tratamiento realizado</h3>';
+    html += `<div class="cabina-note">El especialista registra lo ejecutado en cabina.</div>`;
+
+    const pasos = ['Shampoo', 'Mascarilla', 'Acondicionador', 'Aceite', 'Cierre'];
+    let stepIndex = 0;
+    pasos.forEach(paso => {
+      const items = cabina.filter(p => p.paso === paso);
+      if (items.length === 0) return;
+      items.forEach((item, j) => {
+        const key = `tr_${paso}_${j}`;
+        stepIndex++;
+        html += `<div class="tr-item">
+          <div class="tr-header">
+            <div class="tr-paso">${paso}</div>
+            <div class="tr-producto-sugerido">${item.producto.replace(' — con ozono, máx. 10 min', '')}</div>
+          </div>
+          <div class="tr-opciones">
+            <button class="tr-btn tr-btn-ok" onclick="setTratamiento('${key}', 'realizado', this)">✓ Realizado</button>
+            <button class="tr-btn tr-btn-mod" onclick="setTratamiento('${key}', 'modificado', this)">~ Modificado</button>
+            <button class="tr-btn tr-btn-no" onclick="setTratamiento('${key}', 'no_realizado', this)">— No realizado</button>
+          </div>
+          <div class="tr-mod-field" id="mod_${key}" style="display:none">
+            <input type="text" placeholder="Producto utilizado" oninput="state.tratamiento['${key}_mod'] = this.value" style="width:100%;padding:10px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:var(--font-body);outline:none;margin-top:6px;">
+          </div>
+        </div>`;
+      });
+    });
+
+    html += `<div class="tr-notas">
+      <div class="tr-notas-label">Notas del especialista</div>
+      <textarea placeholder="Observaciones generales: comportamiento del cuero cabelludo, reacción de la huésped, condiciones no capturadas por el sistema..." oninput="state.tratamiento['notas'] = this.value" style="width:100%;padding:12px;border:1px solid var(--border);border-radius:6px;font-size:14px;font-family:var(--font-body);outline:none;resize:none;height:100px;margin-top:8px;background:var(--bg);"></textarea>
+    </div>`;
+
+    tr.innerHTML = html;
+    content.appendChild(tr);
+  }
+}
+
+function getActiveSignals() {
+  const signals = [];
+
+  // Cuestionario: señales de fibra
+  CUESTIONARIO_VARS.forEach(v => {
+    const val = state.cuestionario[v.id];
+    if (val === 'frecuente' || val === 'ocasional') signals.push(v.id);
+  });
+
+  // Escáner: cualquier variable fuera de rango activa dominio A
+  SCANNER_VARS.forEach(v => {
+    const val = parseInt(state.scanner[v.id]);
+    if (!isNaN(val) && val < 75) signals.push('scanner_' + v.id);
+  });
+
+  // EVA: criterios físicos confirmados
+  Object.keys(state.eva).forEach(k => {
+    if (state.eva[k] === true) {
+      const c = EVA_MAP[k].criterion.toLowerCase();
+      if (c.includes('fricción') || c.includes('friccion')) signals.push('friccion');
+      if (c.includes('cohesión') || c.includes('cohesion')) signals.push('cohesion');
+      if (c.includes('integridad')) signals.push('integridad');
+      if (c.includes('movilidad')) signals.push('movilidad');
+    }
+  });
+
+  return [...new Set(signals)];
+}
+
+function getActiveDomains(signals) {
+  const active = [];
+
+  // Dominio A: cualquier variable del escáner fuera de rango
+  const scannerVarIds = SCANNER_VARS.map(v => 'scanner_' + v.id);
+  if (scannerVarIds.some(s => signals.includes(s))) active.push('A');
+
+  // Dominio B: fenómenos de superficie de fibra
+  const domainB = ['resequedad', 'friccion', 'frizz', 'cohesion', 'pesadez', 'movilidad', 'estabilidad'];
+  if (domainB.some(s => signals.includes(s))) active.push('B');
+
+  // Dominio C: alteraciones en arquitectura interna — solo si quiebre es frecuente o integridad confirmada
+  const quiebre = state.cuestionario['quiebre'];
+  const integridad = signals.includes('integridad');
+  if (quiebre === 'frecuente' || integridad) active.push('C');
+
+  return active;
+}
+
+function getDomainDetail(domains) {
+  if (domains.length === 0) return 'Sin señales suficientes para orientar intervención.';
+  const parts = [];
+  if (domains.includes('A')) parts.push('Cuero cabelludo: regulación de sebo, sensibilidad, descamación y poro.');
+  if (domains.includes('B')) parts.push('Fibra: reestructuración de hidratación, cohesión y movilidad.');
+  if (domains.includes('C')) parts.push('Fibra: reconstrucción de integridad estructural.');
+  return parts.join(' ');
+}
+
+function getCabinaProtocol(prescripciones) {
+  const protocol = [];
+
+  const sebo = parseInt(state.scanner['sebo']) || 0;
+  const seboExcesoSevero = state.seboTipo === 'exceso' && sebo > 0 && sebo < 70;
+
+  if (seboExcesoSevero) {
+    protocol.push({ paso: 'Shampoo', producto: 'Tea Tree Shampoo — limpieza profunda (exceso severo de sebo)' });
+    prescripciones.filter(p => p.categoria === 'Shampoo' && !p.producto.includes('Moringa') && !p.producto.includes('Camellia')).forEach(p => {
+      protocol.push({ paso: 'Shampoo', producto: p.producto });
+    });
+  } else {
+    prescripciones.filter(p => p.categoria === 'Shampoo').forEach(p => {
+      protocol.push({ paso: 'Shampoo', producto: p.producto });
+    });
+  }
+
+  prescripciones.filter(p => p.categoria === 'Mascarilla').forEach(p => {
+    protocol.push({ paso: 'Mascarilla', producto: p.producto + ' — con ozono, máx. 10 min' });
+  });
+
+  prescripciones.filter(p => p.categoria === 'Acondicionador').forEach(p => {
+    protocol.push({ paso: 'Acondicionador', producto: p.producto });
+  });
+
+  prescripciones.filter(p => p.categoria === 'Aceite').forEach(p => {
+    protocol.push({ paso: 'Aceite', producto: p.producto });
+  });
+
+  protocol.push({ paso: 'Cierre', producto: 'Botanical Scalp Revitalizer Para Ella / Para Él' });
+
+  return protocol;
+}
+
+function getPrescripciones(signals) {
+  const result = [];
+  const scannerSeverity = {};
+  SCANNER_VARS.forEach(v => {
+    const val = parseInt(state.scanner[v.id]);
+    if (!isNaN(val) && val < 75) scannerSeverity[v.id] = 75 - val;
+  });
+
+  const sv = {};
+  SCANNER_VARS.forEach(v => { sv[v.id] = parseInt(state.scanner[v.id]) || 0; });
+
+  const seboAlto   = sv.sebo > 0 && sv.sebo < 75;
+  const seboBajo   = sv.sebo > 75;
+  const sensAlta   = sv.sensibilidad > 0 && sv.sensibilidad < 75;
+  const descAlta   = sv.descamacion > 0 && sv.descamacion < 75;
+  const poroFuera  = sv.poro > 0 && sv.poro < 75;
+  const volBajo    = sv.volumen > 0 && sv.volumen < 75;
+  const diamBajo   = sv.diametro > 0 && sv.diametro < 75;
+
+  const friccion   = signals.includes('friccion');
+  const cohesion   = signals.includes('cohesion');
+  const integridad = signals.includes('integridad');
+  const movilidad  = signals.includes('movilidad');
+
+  const resequedad = ['frecuente','ocasional'].includes(state.cuestionario['resequedad']);
+  const frizz      = ['frecuente','ocasional'].includes(state.cuestionario['frizz']);
+  const quiebre    = state.cuestionario['quiebre'] === 'frecuente';
+  const pesadez    = ['frecuente','ocasional'].includes(state.cuestionario['pesadez']);
+
+  // Severidad de fibra: usar valor más bajo del escáner relevante o 0
+  // Para fibra usamos diámetro como proxy de severidad estructural
+  const fibraSevera = (diamBajo && sv.diametro < 70) || quiebre || integridad;
+
+  const add = (cat, prod, deseq, sev) => result.push({ categoria: cat, producto: prod, desequilibrio: deseq, severidad: sev });
+
+  // ── SHAMPOOS ──
+  if (seboAlto) {
+    if (state.seboTipo === 'exceso') {
+      if (sensAlta) {
+        add('Shampoo', 'Moringa Shampoo', 'Sebo en exceso / Sensibilidad', (scannerSeverity.sebo||0) + (scannerSeverity.sensibilidad||0));
+      } else {
+        add('Shampoo', 'Camellia Oil-Control Shampoo', 'Sebo en exceso', scannerSeverity.sebo||0);
+      }
+    } else if (state.seboTipo === 'resequedad') {
+      add('Shampoo', 'Green Tea Shampoo', 'Sebo reducido', scannerSeverity.sebo||0);
+    } else {
+      // Sin código: presentar ambas opciones
+      if (sensAlta) {
+        add('Shampoo', 'Moringa Shampoo', 'Sebo en exceso / Sensibilidad', (scannerSeverity.sebo||0) + (scannerSeverity.sensibilidad||0));
+      }
+      add('Shampoo', 'Camellia Oil-Control Shampoo', 'Sebo en exceso', scannerSeverity.sebo||0);
+      add('Shampoo', 'Green Tea Shampoo', 'Sebo reducido', scannerSeverity.sebo||0);
+    }
+  }
+
+  if (descAlta && sensAlta) {
+    add('Shampoo', 'Dandelion Sensitive Shampoo', 'Sensibilidad / Descamación — primera opción', (scannerSeverity.descamacion||0) + (scannerSeverity.sensibilidad||0));
+    add('Shampoo', 'Tea Tree Shampoo', 'Descamación — monitorear tolerancia en cuero sensible', scannerSeverity.descamacion||0);
+  } else if (descAlta) {
+    add('Shampoo', 'Tea Tree Shampoo', 'Descamación', scannerSeverity.descamacion||0);
+  }
+
+  if (sensAlta && !descAlta) {
+    add('Shampoo', 'Dandelion Sensitive Shampoo', 'Sensibilidad', scannerSeverity.sensibilidad||0);
+  }
+
+  if (diamBajo) {
+    add('Shampoo', 'Goji Berry Volumizing Shampoo', 'Diámetro reducido — adelgazamiento progresivo', scannerSeverity.diametro||0);
+    add('Shampoo', 'Peach Blossom Volumizing Shampoo', 'Diámetro reducido — cabello naturalmente delgado', (scannerSeverity.diametro||0) - 1);
+  } else if (volBajo && !diamBajo) {
+    add('Shampoo', 'Goji Berry Volumizing Shampoo', 'Volumen reducido', scannerSeverity.volumen||0);
+  }
+
+  // ── SCALP ──
+  if (volBajo) {
+    add('Scalp', 'Caffeine Botanical Scalp Revitalizer', 'Volumen reducido — previene y revierte la caída', scannerSeverity.volumen||0);
+  }
+
+  if ((seboAlto && state.seboTipo !== 'resequedad') || poroFuera) {
+    add('Scalp', 'Botanical Scalp Revitalizer Para Ella / Para Él', 'Sebo en exceso / Desequilibrio de aceites', (scannerSeverity.sebo||0) + (scannerSeverity.poro||0));
+    add('Scalp', "O'right Green Dry Shampoo", 'Control de sebo en exceso entre sesiones', (scannerSeverity.sebo||0) - 5);
+  }
+
+  if (seboAlto && state.seboTipo !== 'resequedad' && poroFuera) {
+    add('Scalp', 'Cooling and Refreshing Scalp Spray', 'Sebo en exceso / Poro fuera de rango', (scannerSeverity.sebo||0) + (scannerSeverity.poro||0));
+  }
+
+  if (descAlta) {
+    add('Scalp', 'Tea Tree Purifying Scalp Spray', 'Descamación', scannerSeverity.descamacion||0);
+  }
+
+  // ── ACONDICIONADORES ──
+  if (quiebre || integridad || (sv.diametro > 0 && sv.diametro < 70)) {
+    add('Acondicionador', 'Wild Rose Conditioner', 'Quiebre / Integridad visual alterada — reconstrucción', 50);
+  } else if (diamBajo) {
+    add('Acondicionador', 'Caffeine Conditioner', 'Diámetro reducido — reestructuración y refuerzo', scannerSeverity.diametro||0);
+  } else if (resequedad || friccion || frizz || cohesion || pesadez || movilidad) {
+    add('Acondicionador', 'Caffeine Conditioner', 'Reestructuración de superficie', 30);
+    if ((resequedad || friccion) && state.seboTipo !== 'resequedad') {
+      add('Acondicionador', 'Bamboo Moisturizing Conditioner', 'Resequedad / Fricción elevada', 28);
+    }
+  }
+
+  // ── MASCARILLAS ──
+  if (quiebre || integridad || (sv.diametro > 0 && sv.diametro < 70)) {
+    add('Mascarilla', 'Ginkgo Intensive Hair Cream', 'Quiebre / Integridad visual alterada — reconstrucción', 50);
+  } else if (resequedad || friccion) {
+    add('Mascarilla', 'Yogurt Hair Mask', 'Resequedad / Fricción elevada — reestructuración de superficie', 30);
+  }
+
+  // ── ACEITES ──
+  if (quiebre || integridad || (sv.diametro > 0 && sv.diametro < 70)) {
+    add('Aceite', 'Wild Rose Hair Oil', 'Quiebre / Integridad visual alterada — reconstrucción', 50);
+  } else if (frizz || cohesion) {
+    add('Aceite', 'Recoffee Repair Hair Cream', 'Frizz / Cohesión reducida — reestructuración de superficie', 35);
+  } else if (resequedad || friccion) {
+    add('Aceite', 'Camellia Essential Hair Oil', 'Resequedad / Fricción elevada — reestructuración de superficie', 30);
+  }
+
+  // Ordenar por categoría y severidad
+  const catOrder = ['Shampoo', 'Scalp', 'Acondicionador', 'Mascarilla', 'Aceite'];
+  result.sort((a, b) => {
+    const cd = catOrder.indexOf(a.categoria) - catOrder.indexOf(b.categoria);
+    return cd !== 0 ? cd : b.severidad - a.severidad;
+  });
+
+  return result;
+}
+
+function generarPDF() {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: 'mm', format: 'a4' });
+
+  const accent = [45, 90, 79];
+  const warn = [196, 98, 45];
+  const gray = [107, 101, 96];
+  const light = [234, 242, 240];
+  const pageW = 210;
+  const margin = 18;
+  const contentW = pageW - margin * 2;
+  let y = 0;
+
+  function checkPage(needed) {
+    if (y + needed > 272) { doc.addPage(); y = 18; }
+  }
+
+  // Header
+  doc.setFillColor(...accent);
+  doc.rect(0, 0, 210, 22, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(16);
+  doc.setFont('helvetica', 'bold');
+  doc.text('EVA', margin, 13);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text('SISTEMA INTEGRAL DE EVALUACIÓN CAPILAR', margin + 14, 13);
+  y = 30;
+
+  // Meta block
+  doc.setFillColor(...light);
+  doc.roundedRect(margin, y, contentW, 18, 2, 2, 'F');
+  doc.setTextColor(...gray);
+  doc.setFontSize(8);
+  doc.text('HUÉSPED', margin + 4, y + 7);
+  doc.text('FECHA', margin + contentW / 2 + 4, y + 7);
+  doc.setTextColor(26, 26, 26);
+  doc.setFontSize(11);
+  doc.setFont('helvetica', 'bold');
+  doc.text(state.nombre || '—', margin + 4, y + 14);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  doc.text(state.fecha, margin + contentW / 2 + 4, y + 14);
+  y += 26;
+
+  function sectionTitle(title) {
+    checkPage(14);
+    doc.setFillColor(...accent);
+    doc.rect(margin, y, contentW, 8, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(title.toUpperCase(), margin + 3, y + 5.5);
+    y += 12;
+  }
+
+  function dataRow(label, value, alert) {
+    checkPage(9);
+    doc.setFillColor(247, 246, 243);
+    doc.rect(margin, y, contentW, 7.5, 'F');
+    doc.setTextColor(...gray);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(label, margin + 3, y + 5.2);
+    if (alert === 'alert') {
+      doc.setFillColor(...warn);
+      doc.roundedRect(margin + contentW - 38, y + 1.5, 34, 5, 1, 1, 'F');
+      doc.setTextColor(255, 255, 255);
+    } else if (alert === 'ok') {
+      doc.setFillColor(...light);
+      doc.roundedRect(margin + contentW - 38, y + 1.5, 34, 5, 1, 1, 'F');
+      doc.setTextColor(...accent);
+    } else {
+      doc.setTextColor(26, 26, 26);
+    }
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.text(value, margin + contentW - 34 + (34 - doc.getTextWidth(value)) / 2, y + 5.2);
+    y += 8.5;
+  }
+
+  function convergenceRow(label) {
+    checkPage(9);
+    doc.setFillColor(247, 246, 243);
+    doc.rect(margin, y, contentW, 7.5, 'F');
+    doc.setFillColor(...accent);
+    doc.rect(margin, y, 2, 7.5, 'F');
+    doc.setTextColor(26, 26, 26);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(label, margin + 6, y + 5.2);
+    y += 8.5;
+  }
+
+  // 1. Cuestionario
+  sectionTitle('Cuestionario de fibra');
+  CUESTIONARIO_VARS.forEach(v => {
+    const val = state.cuestionario[v.id];
+    const label = val === 'frecuente' ? 'Sí — Frecuente' : val === 'ocasional' ? 'Sí — Ocasional' : val === 'no' ? 'No' : '—';
+    const alert = val === 'frecuente' ? 'alert' : 'ok';
+    dataRow(v.label, label, alert);
+  });
+  y += 4;
+
+  // 2. Escáner
+  sectionTitle("Escáner O'right");
+  SCANNER_VARS.forEach(v => {
+    const val = state.scanner[v.id];
+    const num = parseInt(val);
+    const display = (!val || isNaN(num)) ? '—' : `${num}`;
+    const alert = (!val || isNaN(num)) ? '' : num < 75 ? 'alert' : 'ok';
+    dataRow(v.label, display, alert);
+  });
+  y += 4;
+
+  // 3. EVA
+  const evaKeys = Object.keys(state.eva);
+  if (evaKeys.length > 0) {
+    sectionTitle('Validación física EVA');
+    evaKeys.forEach(k => {
+      const criterion = EVA_MAP[k].criterion;
+      const val = state.eva[k];
+      dataRow(criterion, val ? 'Confirmado' : 'No confirmado', val ? 'alert' : 'ok');
+    });
+    y += 4;
+  }
+
+  // 4. Convergencias
+  const activeSignals = getActiveSignals();
+  const convergencias = CORRELATIONS.filter(c => c.vars.every(v => activeSignals.includes(v)));
+  if (convergencias.length > 0) {
+    sectionTitle('Convergencias observadas');
+    convergencias.forEach(c => convergenceRow(c.label));
+    y += 4;
+  }
+
+  // 5. Dominios
+  const domains = getActiveDomains(activeSignals);
+  sectionTitle('Orientación de intervención');
+  checkPage(20);
+  const domainColors = { A: accent, B: [90, 75, 45], C: [90, 45, 45] };
+  let dx = margin;
+  domains.forEach(d => {
+    const label = `${d} — ${DOMAIN_LABELS[d]}`;
+    const w = doc.getTextWidth(label) + 10;
+    doc.setFillColor(...domainColors[d]);
+    doc.roundedRect(dx, y, w, 9, 2, 2, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text(label, dx + 5, y + 6.2);
+    dx += w + 4;
+  });
+  y += 14;
+
+  checkPage(10);
+  doc.setTextColor(...gray);
+  doc.setFontSize(8);
+  doc.setFont('helvetica', 'normal');
+  doc.text(getDomainDetail(domains), margin, y, { maxWidth: contentW });
+  y += 10;
+
+  // Footer
+  doc.setFillColor(...accent);
+  doc.rect(0, 285, 210, 12, 'F');
+  doc.setTextColor(255, 255, 255);
+  doc.setFontSize(7);
+  doc.text('EVA — Sistema Integral de Evaluación Capilar', margin, 292);
+  doc.text('Documento generado por sesión. No constituye diagnóstico médico.', pageW - margin, 292, { align: 'right' });
+
+  // Save
+  const filename = `EVA_${(state.nombre || 'huesped').replace(/\s+/g, '_')}_${new Date().toISOString().slice(0,10)}.pdf`;
+  doc.save(filename);
+}
+
+function navigate(dir) {
+  const currentId = sections.find(s => document.getElementById(s).classList.contains('active'));
+  const idx = evalSections.indexOf(currentId);
+  if (idx === -1) return;
+  const next = idx + dir;
+  if (next < 0 || next >= evalSections.length) return;
+  document.getElementById(evalSections[idx]).classList.remove('active');
+  document.getElementById(evalSections[next]).classList.add('active');
+  if (evalSections[next] === 'sec-cuestionario') buildCuestionario();
+  if (evalSections[next] === 'sec-scanner') buildScanner();
+  if (evalSections[next] === 'sec-eva') buildEVA();
+  if (evalSections[next] === 'sec-reporte') buildReporte();
+  state.evalStep = next;
+  updateNavEval();
+  updateProgress();
+  window.scrollTo(0, 0);
+}
+
+function updateNavEval() {
+  const s = state.evalStep || 0;
+  const back = document.getElementById('btn-back');
+  const next = document.getElementById('btn-next');
+  const reset = document.getElementById('btn-reset');
+  const home = document.getElementById('btn-home');
+  home.style.display = 'none';
+  back.style.display = s > 0 && s < evalSections.length - 1 ? 'block' : 'none';
+  if (s === evalSections.length - 1) {
+    next.style.display = 'none';
+    reset.style.display = 'block';
+  } else {
+    next.style.display = 'block';
+    next.textContent = s === evalSections.length - 2 ? 'Ver reporte' : 'Continuar';
+    reset.style.display = 'none';
+  }
+}
+
+function updateNav() { updateNavEval(); }
+
+function updateProgress() {
+  const s = state.evalStep || 0;
+  document.getElementById('progressFill').style.width = (s / (evalSections.length - 1) * 100) + '%';
+}
+
+function setTratamiento(key, value, el) {
+  state.tratamiento[key] = value;
+  const item = el.closest('.tr-item');
+  item.querySelectorAll('.tr-btn').forEach(b => b.classList.remove('tr-active-ok', 'tr-active-mod', 'tr-active-no'));
+  if (value === 'realizado') el.classList.add('tr-active-ok');
+  else if (value === 'modificado') el.classList.add('tr-active-mod');
+  else el.classList.add('tr-active-no');
+  const modField = document.getElementById('mod_' + key);
+  if (modField) modField.style.display = value === 'modificado' ? 'block' : 'none';
+}
+
+function resetApp() {
+  state = { nombre: '', fecha: state.fecha, seboTipo: null, diametroTipo: null, tratamiento: {}, cuestionario: {}, scanner: {}, eva: {}, evalStep: 0 };
+  goHome();
+}
+
+goHome();
+</script>
+</body>
+</html>
